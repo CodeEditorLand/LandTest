@@ -510,12 +510,10 @@ async function unzipVSCode(
 
 				await checksum;
 
-				await spawnDecompressorChild("unzip", [
-					"-q",
-					stagingFile,
-					"-d",
-					extractDir,
-				]);
+				// unzip does not create intermediate directories when using -d
+				await fs.promises.mkdir(extractDir, { recursive: true });
+
+				await spawnDecompressorChild('unzip', ['-q', stagingFile, '-d', extractDir]);
 			}
 		} finally {
 			fs.unlink(stagingFile, () => undefined);
