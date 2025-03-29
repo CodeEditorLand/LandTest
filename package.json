@@ -25,7 +25,7 @@
 	"devDependencies": {
 		"@types/node": "22",
 		"@types/rimraf": "4.0.5",
-		"@types/semver": "7.5.8",
+		"@types/semver": "7.7.0",
 		"lint-staged": "15.5.0"
 	}
 }
