@@ -14,21 +14,31 @@ import {
 	fetchInsiderVersions,
 	fetchStableVersions,
 	fetchTargetInferredVersion,
-} from "./download.js";
-import { SilentReporter } from "./progress.js";
+} from './download.js';
+import { SilentReporter } from './progress.js';
 import {
-	resolveCliPathFromVSCodeExecutablePath,
-	systemDefaultPlatform,
-} from "./util.js";
+	isPlatformDarwin,
+	isPlatformLinux,
+	isPlatformWindows,
+	resolveCliPathFromVSCodeExecutablePath
+} from './util.js';
 
 const platforms = [
-	"darwin",
-	"darwin-arm64",
-	"win32-x64-archive",
-	"win32-arm64-archive",
-	"linux-x64",
-	"linux-arm64",
-	"linux-armhf",
+	'darwin',
+	'darwin-arm64',
+	'win32-x64-archive',
+	'win32-arm64-archive',
+	'linux-x64',
+	'linux-arm64',
+	'linux-armhf',
+
+	'cli-linux-x64',
+	'cli-win32-x64',
+	'cli-darwin-x64',
+
+	'server-win32-x64',
+	'server-darwin',
+	'server-linux-x64',
 ];
 
 describe("sane downloads", () => {
@@ -38,7 +48,14 @@ describe("sane downloads", () => {
 		await fs.mkdir(testTempDir, { recursive: true });
 	});
 
-	for (const quality of ["insiders", "stable"]) {
+	const isRunnableOnThisPlatform =
+		process.platform === 'win32'
+			? isPlatformWindows
+			: process.platform === 'darwin'
+				? isPlatformDarwin
+				: isPlatformLinux;
+
+	for (const quality of ['insiders', 'stable']) {
 		for (const platform of platforms) {
 			test.concurrent(`${quality}/${platform}`, async () => {
 				const location = await downloadAndUnzipVSCode({
@@ -62,13 +79,9 @@ describe("sane downloads", () => {
 					throw new Error(`expected ${exePath} to from ${location}`);
 				}
 
-				if (platform === systemDefaultPlatform) {
-					const shell = process.platform === "win32";
-					const version = spawnSync(
-						shell ? `"${exePath}"` : exePath,
-						["--version"],
-						{ shell },
-					);
+				if (platform.includes(process.arch) && isRunnableOnThisPlatform(platform)) {
+					const shell = process.platform === 'win32';
+					const version = spawnSync(shell ? `"${exePath}"` : exePath, ['--version'], { shell });
 					expect(version.status).to.equal(0);
 					expect(version.stdout.toString().trim()).to.not.be.empty;
 				}

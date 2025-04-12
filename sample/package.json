@@ -1,52 +1,39 @@
 {
-	"name": "@codeeditorland/test-sample",
-	"displayName": "vscode-test-sample",
-	"version": "0.0.1",
-	"private": false,
-	"description": "",
-	"keywords": [
-		"codeeditorland",
-		"land",
-		"playform"
-	],
-	"homepage": "HTTPS://GitHub.Com/CodeEditorLand/LandTest#readme",
-	"bugs": {
-		"url": "HTTPS://GitHub.Com/CodeEditorLand/LandTest/issues"
-	},
-	"repository": {
-		"type": "git",
-		"url": "git+HTTPS://github.com/CodeEditorLand/LandTest.git"
-	},
-	"license": "SEE LICENSE IN LICENSE",
-	"author": {
-		"name": "Source 🖋️ Open 👐🏻",
-		"email": "Source/Open@Editor.Land",
-		"url": "HTTPS://Editor.Land"
-	},
-	"type": "module",
-	"main": "./out/src/extension.js",
-	"scripts": {
-		"compile": "tsc -p ./",
-		"prepublishOnly": "Build 'Source/**/*.ts'"
-	},
-	"contributes": {
-		"commands": [
-			{
-				"command": "extension.helloWorld",
-				"title": "Hello World"
-			}
-		]
-	},
-	"activationEvents": [
-		"onCommand:extension.helloWorld"
-	],
-	"dependencies": {},
-	"devDependencies": {
-		"@playform/build": "0.2.3",
-		"@types/node": "22",
-		"glob": "11.0.1"
-	},
-	"publishConfig": {
-		"access": "public"
-	}
+  "name": "vscode-test-sample",
+  "displayName": "vscode-test-sample",
+  "description": "",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.32.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:extension.helloWorld"
+  ],
+  "main": "./out/src/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "extension.helloWorld",
+        "title": "Hello World"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "test": "cd .. && tsc && cd sample && tsc && node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.0",
+    "@types/node": "^20",
+    "@types/vscode": "^1.52.0",
+    "glob": "^10.3.10",
+    "mocha": "^10.0.0",
+    "typescript": "^5.4.5"
+  },
+  "dependencies": {}
 }

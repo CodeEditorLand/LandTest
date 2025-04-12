@@ -25,6 +25,8 @@ import {
 	insidersDownloadDirMetadata,
 	insidersDownloadDirToExecutablePath,
 	isDefined,
+	isPlatformCLI,
+	isPlatformServer,
 	isSubdirectory,
 	onceWithoutRejections,
 	streamToBuffer,
@@ -460,7 +462,8 @@ async function unzipVSCode(
 
 	const checksum = validateStream(stream, length, sha256);
 
-	if (format === "zip") {
+	if (format === 'zip') {
+		const stripComponents = isPlatformServer(platform) ? 1 : 0;
 		try {
 			reporter.report({
 				stage: ProgressReportStage.ExtractingSynchonrously,
@@ -483,12 +486,13 @@ async function unzipVSCode(
 				// extract file with jszip
 				for (const filename of Object.keys(content.files)) {
 					const file = content.files[filename];
-
-					const filepath = path.join(extractDir, filename);
-
 					if (file.dir) {
 						continue;
 					}
+
+					const filepath = stripComponents
+						? path.join(extractDir, filename.split(/[/\\]/g).slice(stripComponents).join(path.sep))
+						: path.join(extractDir, filename);
 
 					// vscode update zips are trusted, but check for zip slip anyway.
 					if (!isSubdirectory(extractDir, filepath)) {
@@ -513,31 +517,36 @@ async function unzipVSCode(
 				// unzip does not create intermediate directories when using -d
 				await fs.promises.mkdir(extractDir, { recursive: true });
 
-				await spawnDecompressorChild("unzip", [
-					"-q",
-					stagingFile,
-					"-d",
-					extractDir,
-				]);
+				await spawnDecompressorChild('unzip', ['-q', stagingFile, '-d', extractDir]);
+
+				// unzip has no --strip-components equivalent
+				if (stripComponents) {
+					const files = await fs.promises.readdir(extractDir);
+					for (const file of files) {
+						const dirPath = path.join(extractDir, file);
+						const children = await fs.promises.readdir(dirPath);
+						await Promise.all(children.map((c) => fs.promises.rename(path.join(dirPath, c), path.join(extractDir, c))));
+						await fs.promises.rmdir(dirPath);
+					}
+				}
 			}
 		} finally {
 			fs.unlink(stagingFile, () => undefined);
 		}
 	} else {
+		const stripComponents = isPlatformCLI(platform) ? 0 : 1;
+
 		// tar does not create extractDir by default
 		if (!fs.existsSync(extractDir)) {
 			fs.mkdirSync(extractDir);
 		}
 
 		// The CLI is a singular binary that doesn't have a wrapper component to remove
-		const s = platform.includes("cli-") ? 0 : 1;
-
 		await spawnDecompressorChild(
-			"tar",
-			["-xzf", "-", `--strip-components=${s}`, "-C", extractDir],
+			'tar',
+			['-xzf', '-', `--strip-components=${stripComponents}`, '-C', extractDir],
 			stream,
 		);
-
 		await checksum;
 	}
 }
@@ -651,12 +660,12 @@ export async function download(
 
 	if (fs.existsSync(path.join(downloadedPath, COMPLETE_FILE_NAME))) {
 		if (version.isInsiders) {
-			reporter.report({
-				stage: ProgressReportStage.FetchingInsidersMetadata,
-			});
-
-			const { version: currentHash, date: currentDate } =
-				insidersDownloadDirMetadata(downloadedPath, platform);
+			reporter.report({ stage: ProgressReportStage.FetchingInsidersMetadata });
+			const { version: currentHash, date: currentDate } = insidersDownloadDirMetadata(
+				downloadedPath,
+				platform,
+				reporter,
+			);
 
 			const { version: latestHash, timestamp: latestTimestamp } =
 				version.id === "insiders" // not qualified with a date

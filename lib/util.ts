@@ -3,32 +3,26 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ChildProcess, spawn, SpawnOptions } from "child_process";
-import { createHash } from "crypto";
-import { readFileSync } from "fs";
-import * as https from "https";
-import * as path from "path";
-import { URL } from "url";
-import { HttpProxyAgent } from "http-proxy-agent";
-import { HttpsProxyAgent } from "https-proxy-agent";
-
-import {
-	defaultCachePath,
-	downloadAndUnzipVSCode,
-	DownloadOptions,
-	DownloadPlatform,
-} from "./download";
-import * as request from "./request";
-import { TestOptions } from "./runTest";
+import { ChildProcess, SpawnOptions, spawn } from 'child_process';
+import { createHash } from 'crypto';
+import { readFileSync } from 'fs';
+import { HttpProxyAgent } from 'http-proxy-agent';
+import * as https from 'https';
+import { HttpsProxyAgent } from 'https-proxy-agent';
+import * as path from 'path';
+import { URL } from 'url';
+import { DownloadOptions, DownloadPlatform, defaultCachePath, downloadAndUnzipVSCode } from './download';
+import * as request from './request';
+import { TestOptions } from './runTest';
+import { ProgressReporter } from './progress';
 
 export let systemDefaultPlatform: DownloadPlatform;
 
-const windowsPlatforms = new Set<DownloadPlatform>([
-	"win32-x64-archive",
-	"win32-arm64-archive",
-]);
-
-const darwinPlatforms = new Set<DownloadPlatform>(["darwin-arm64", "darwin"]);
+export const isPlatformWindows = (platform: string) => platform.includes('win32');
+export const isPlatformDarwin = (platform: string) => platform.includes('darwin');
+export const isPlatformLinux = (platform: string) => platform.includes('linux');
+export const isPlatformServer = (platform: string) => platform.includes('server');
+export const isPlatformCLI = (platform: string) => platform.includes('cli-');
 
 switch (process.platform) {
 	case "darwin":
@@ -131,61 +125,68 @@ export function urlToOptions(url: string): https.RequestOptions {
 	return options;
 }
 
-export function downloadDirToExecutablePath(
-	dir: string,
-	platform: DownloadPlatform,
-) {
-	if (windowsPlatforms.has(platform)) {
-		return path.resolve(dir, "Code.exe");
-	} else if (darwinPlatforms.has(platform)) {
-		return path.resolve(
-			dir,
-			"Visual Studio Code.app/Contents/MacOS/Electron",
-		);
+export function downloadDirToExecutablePath(dir: string, platform: DownloadPlatform) {
+	if (isPlatformServer(platform)) {
+		return isPlatformWindows(platform)
+			? path.resolve(dir, 'bin', 'code-server.cmd')
+			: path.resolve(dir, 'bin', 'code-server');
+	} else if (isPlatformCLI(platform)) {
+		return isPlatformWindows(platform) ? path.resolve(dir, 'code.exe') : path.resolve(dir, 'code');
 	} else {
-		return path.resolve(dir, "code");
+		if (isPlatformWindows(platform)) {
+			return path.resolve(dir, 'Code.exe');
+		} else if (isPlatformDarwin(platform)) {
+			return path.resolve(dir, 'Visual Studio Code.app/Contents/MacOS/Electron');
+		} else {
+			return path.resolve(dir, 'code');
+		}
 	}
 }
 
-export function insidersDownloadDirToExecutablePath(
-	dir: string,
-	platform: DownloadPlatform,
-) {
-	if (windowsPlatforms.has(platform)) {
-		return path.resolve(dir, "Code - Insiders.exe");
-	} else if (darwinPlatforms.has(platform)) {
-		return path.resolve(
-			dir,
-			"Visual Studio Code - Insiders.app/Contents/MacOS/Electron",
-		);
+export function insidersDownloadDirToExecutablePath(dir: string, platform: DownloadPlatform) {
+	if (isPlatformServer(platform)) {
+		return isPlatformWindows(platform)
+			? path.resolve(dir, 'bin', 'code-server-insiders.cmd')
+			: path.resolve(dir, 'bin', 'code-server-insiders');
+	} else if (isPlatformCLI(platform)) {
+		return isPlatformWindows(platform) ? path.resolve(dir, 'code-insiders.exe') : path.resolve(dir, 'code-insiders');
 	} else {
-		return path.resolve(dir, "code-insiders");
+		if (isPlatformWindows(platform)) {
+			return path.resolve(dir, 'Code - Insiders.exe');
+		} else if (isPlatformDarwin(platform)) {
+			return path.resolve(dir, 'Visual Studio Code - Insiders.app/Contents/MacOS/Electron');
+		} else {
+			return path.resolve(dir, 'code-insiders');
+		}
 	}
 }
 
-export function insidersDownloadDirMetadata(
-	dir: string,
-	platform: DownloadPlatform,
-) {
+export function insidersDownloadDirMetadata(dir: string, platform: DownloadPlatform, reporter: ProgressReporter) {
 	let productJsonPath;
-
-	if (windowsPlatforms.has(platform)) {
-		productJsonPath = path.resolve(dir, "resources/app/product.json");
-	} else if (darwinPlatforms.has(platform)) {
-		productJsonPath = path.resolve(
-			dir,
-			"Visual Studio Code - Insiders.app/Contents/Resources/app/product.json",
-		);
+	if (isPlatformServer(platform)) {
+		productJsonPath = path.resolve(dir, 'product.json');
+	} else if (isPlatformWindows(platform)) {
+		productJsonPath = path.resolve(dir, 'resources/app/product.json');
+	} else if (isPlatformDarwin(platform)) {
+		productJsonPath = path.resolve(dir, 'Visual Studio Code - Insiders.app/Contents/Resources/app/product.json');
 	} else {
 		productJsonPath = path.resolve(dir, "resources/app/product.json");
 	}
 
-	const productJson = JSON.parse(readFileSync(productJsonPath, "utf-8"));
+	try {
+		const productJson = JSON.parse(readFileSync(productJsonPath, 'utf-8'));
 
-	return {
-		version: productJson.commit,
-		date: new Date(productJson.date),
-	};
+		return {
+			version: productJson.commit,
+			date: new Date(productJson.date),
+		};
+	} catch (e) {
+		reporter.error(`Error reading product.json (${e}) will download again`);
+		return {
+			version: 'unknown',
+			date: new Date(0),
+		};
+	}
 }
 
 export interface IUpdateMetadata {
@@ -236,21 +237,18 @@ export function resolveCliPathFromVSCodeExecutablePath(
 	if (platform === "win32-archive") {
 		throw new Error("Windows 32-bit is no longer supported");
 	}
-
-	if (windowsPlatforms.has(platform)) {
-		if (vscodeExecutablePath.endsWith("Code - Insiders.exe")) {
-			return path.resolve(
-				vscodeExecutablePath,
-				"../bin/code-insiders.cmd",
-			);
+	if (isPlatformServer(platform) || isPlatformCLI(platform)) {
+		// no separate CLI
+		return vscodeExecutablePath;
+	}
+	if (isPlatformWindows(platform)) {
+		if (vscodeExecutablePath.endsWith('Code - Insiders.exe')) {
+			return path.resolve(vscodeExecutablePath, '../bin/code-insiders.cmd');
 		} else {
 			return path.resolve(vscodeExecutablePath, "../bin/code.cmd");
 		}
-	} else if (darwinPlatforms.has(platform)) {
-		return path.resolve(
-			vscodeExecutablePath,
-			"../../../Contents/Resources/app/bin/code",
-		);
+	} else if (isPlatformDarwin(platform)) {
+		return path.resolve(vscodeExecutablePath, '../../../Contents/Resources/app/bin/code');
 	} else {
 		if (vscodeExecutablePath.endsWith("code-insiders")) {
 			return path.resolve(vscodeExecutablePath, "../bin/code-insiders");
@@ -280,7 +278,7 @@ export function resolveCliPathFromVSCodeExecutablePath(
  */
 export function resolveCliArgsFromVSCodeExecutablePath(
 	vscodeExecutablePath: string,
-	options?: Pick<TestOptions, "reuseMachineInstall" | "platform">,
+	options?: Pick<TestOptions, 'reuseMachineInstall' | 'platform'>,
 ) {
 	const args = [
 		resolveCliPathFromVSCodeExecutablePath(
@@ -517,9 +515,9 @@ export function killTree(processId: number, force: boolean) {
 		// when killing a process in Windows its child processes are *not* killed but become root processes.
 		// Therefore we use TASKKILL.EXE
 		cp = spawn(
-			path.join(windir, "System32", "taskkill.exe"),
-			[...(force ? ["/F"] : []), "/T", "/PID", processId.toString()],
-			{ stdio: "inherit" },
+			path.join(windir, 'System32', 'taskkill.exe'),
+			[...(force ? ['/F'] : []), '/T', '/PID', processId.toString()],
+			{ stdio: 'inherit' },
 		);
 	} else {
 		// on linux and OS X we kill all direct and indirect child processes as well
