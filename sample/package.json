@@ -43,8 +43,8 @@
 	"dependencies": {},
 	"devDependencies": {
 		"@playform/build": "0.2.3",
-		"@types/node": "^20",
-		"glob": "^10.3.10"
+		"@types/node": "22",
+		"glob": "11.0.1"
 	},
 	"publishConfig": {
 		"access": "public"
