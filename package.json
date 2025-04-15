@@ -1,10 +1,33 @@
 {
-	"name": "@vscode/test-electron",
+	"name": "@codeeditorland/test-electron",
+	"version": "0.0.1",
+	"private": false,
+	"keywords": [
+		"codeeditorland",
+		"land",
+		"playform"
+	],
+	"homepage": "HTTPS://GitHub.Com/CodeEditorLand/LandTest#readme",
+	"bugs": {
+		"url": "HTTPS://GitHub.Com/CodeEditorLand/LandTest/issues"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+HTTPS://github.com/CodeEditorLand/LandTest.git"
+	},
+	"license": "SEE LICENSE IN LICENSE",
+	"author": {
+		"name": "Source 🖋️ Open 👐🏻",
+		"email": "Source/Open@Editor.Land",
+		"url": "HTTPS://Editor.Land"
+	},
+	"type": "module",
 	"main": "./out/index.js",
 	"scripts": {
 		"compile": "tsc -p ./",
 		"prepack": "tsc -p ./",
-		"prepare": "husky"
+		"prepare": "husky",
+		"prepublishOnly": "Build 'Source/**/*.ts'"
 	},
 	"lint-staged": {
 		"*.md": [
@@ -23,9 +46,13 @@
 		"semver": "^7.6.2"
 	},
 	"devDependencies": {
+		"@playform/build": "0.2.3",
 		"@types/node": "^20",
 		"@types/rimraf": "^3.0.2",
 		"@types/semver": "^7.5.8",
 		"lint-staged": "^15.2.7"
+	},
+	"publishConfig": {
+		"access": "public"
 	}
 }
