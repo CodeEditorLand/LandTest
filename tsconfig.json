@@ -25,6 +25,7 @@
 	"include": [
 		"lib",
 		"src",
+		"src",
 		"src"
 	]
 }
