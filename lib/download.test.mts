@@ -3,12 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { spawnSync } from "child_process";
-import { existsSync, promises as fs } from "fs";
-import { tmpdir } from "os";
-import { dirname, join } from "path";
-import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
-
+import { spawnSync } from 'child_process';
+import { existsSync, promises as fs } from 'fs';
+import { tmpdir } from 'os';
+import { dirname, join } from 'path';
+import { afterAll, afterEach, beforeAll, describe, expect, test } from 'vitest';
 import {
 	downloadAndUnzipVSCode,
 	fetchInsiderVersions,
@@ -41,8 +40,8 @@ const platforms = [
 	'server-linux-x64',
 ];
 
-describe("sane downloads", () => {
-	const testTempDir = join(tmpdir(), "vscode-test-download");
+describe('sane downloads', () => {
+	const testTempDir = join(tmpdir(), 'vscode-test-download');
 
 	beforeAll(async () => {
 		await fs.mkdir(testTempDir, { recursive: true });
@@ -66,15 +65,10 @@ describe("sane downloads", () => {
 				});
 
 				if (!existsSync(location)) {
-					throw new Error(
-						`expected ${location} to exist for ${platform}`,
-					);
+					throw new Error(`expected ${location} to exist for ${platform}`);
 				}
 
-				const exePath = resolveCliPathFromVSCodeExecutablePath(
-					location,
-					platform,
-				);
+				const exePath = resolveCliPathFromVSCodeExecutablePath(location, platform);
 				if (!existsSync(exePath)) {
 					throw new Error(`expected ${exePath} to from ${location}`);
 				}
@@ -98,26 +92,17 @@ describe("sane downloads", () => {
 	});
 });
 
-describe("fetchTargetInferredVersion", () => {
+describe('fetchTargetInferredVersion', () => {
 	let stable: string[];
 	let insiders: string[];
-	const extensionsDevelopmentPath = join(
-		tmpdir(),
-		"vscode-test-tmp-workspace",
-	);
+	const extensionsDevelopmentPath = join(tmpdir(), 'vscode-test-tmp-workspace');
 
 	beforeAll(async () => {
-		[stable, insiders] = await Promise.all([
-			fetchStableVersions(true, 5000),
-			fetchInsiderVersions(true, 5000),
-		]);
+		[stable, insiders] = await Promise.all([fetchStableVersions(true, 5000), fetchInsiderVersions(true, 5000)]);
 	});
 
 	afterEach(async () => {
-		await fs.rm(extensionsDevelopmentPath, {
-			recursive: true,
-			force: true,
-		});
+		await fs.rm(extensionsDevelopmentPath, { recursive: true, force: true });
 	});
 
 	const writeJSON = async (path: string, contents: unknown) => {
@@ -126,67 +111,59 @@ describe("fetchTargetInferredVersion", () => {
 		await fs.writeFile(target, JSON.stringify(contents));
 	};
 
-	const doFetch = (paths = ["./"]) =>
+	const doFetch = (paths = ['./']) =>
 		fetchTargetInferredVersion({
-			cachePath: join(extensionsDevelopmentPath, ".cache"),
-			platform: "win32-x64-archive",
+			cachePath: join(extensionsDevelopmentPath, '.cache'),
+			platform: 'win32-x64-archive',
 			timeout: 5000,
-			extensionsDevelopmentPath: paths.map((p) =>
-				join(extensionsDevelopmentPath, p),
-			),
+			extensionsDevelopmentPath: paths.map((p) => join(extensionsDevelopmentPath, p)),
 		});
 
-	test("matches stable if no workspace", async () => {
+	test('matches stable if no workspace', async () => {
 		const version = await doFetch();
 		expect(version.id).to.equal(stable[0]);
 	});
 
-	test("matches stable by default", async () => {
-		await writeJSON("package.json", {});
+	test('matches stable by default', async () => {
+		await writeJSON('package.json', {});
 		const version = await doFetch();
 		expect(version.id).to.equal(stable[0]);
 	});
 
-	test("matches if stable is defined", async () => {
-		await writeJSON("package.json", { engines: { vscode: "^1.50.0" } });
+	test('matches if stable is defined', async () => {
+		await writeJSON('package.json', { engines: { vscode: '^1.50.0' } });
 		const version = await doFetch();
 		expect(version.id).to.equal(stable[0]);
 	});
 
-	test("matches best", async () => {
-		await writeJSON("package.json", { engines: { vscode: "<=1.60.5" } });
+	test('matches best', async () => {
+		await writeJSON('package.json', { engines: { vscode: '<=1.60.5' } });
 		const version = await doFetch();
-		expect(version.id).to.equal("1.60.2");
+		expect(version.id).to.equal('1.60.2');
 	});
 
-	test("matches multiple workspaces", async () => {
-		await writeJSON("a/package.json", { engines: { vscode: "<=1.60.5" } });
-		await writeJSON("b/package.json", { engines: { vscode: "<=1.55.5" } });
-		const version = await doFetch(["a", "b"]);
-		expect(version.id).to.equal("1.55.2");
+	test('matches multiple workspaces', async () => {
+		await writeJSON('a/package.json', { engines: { vscode: '<=1.60.5' } });
+		await writeJSON('b/package.json', { engines: { vscode: '<=1.55.5' } });
+		const version = await doFetch(['a', 'b']);
+		expect(version.id).to.equal('1.55.2');
 	});
 
-	test("matches insiders to better stable if there is one", async () => {
-		await writeJSON("package.json", {
-			engines: { vscode: "^1.60.0-insider" },
-		});
+	test('matches insiders to better stable if there is one', async () => {
+		await writeJSON('package.json', { engines: { vscode: '^1.60.0-insider' } });
 		const version = await doFetch();
 		expect(version.id).to.equal(stable[0]);
 	});
 
-	test("matches current insiders", async () => {
-		await writeJSON("package.json", {
-			engines: { vscode: `^${insiders[0]}` },
-		});
+	test('matches current insiders', async () => {
+		await writeJSON('package.json', { engines: { vscode: `^${insiders[0]}` } });
 		const version = await doFetch();
 		expect(version.id).to.equal(insiders[0]);
 	});
 
-	test("matches insiders to exact", async () => {
-		await writeJSON("package.json", {
-			engines: { vscode: "1.60.0-insider" },
-		});
+	test('matches insiders to exact', async () => {
+		await writeJSON('package.json', { engines: { vscode: '1.60.0-insider' } });
 		const version = await doFetch();
-		expect(version.id).to.equal("1.60.0-insider");
+		expect(version.id).to.equal('1.60.0-insider');
 	});
 });

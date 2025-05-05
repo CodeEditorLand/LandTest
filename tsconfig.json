@@ -1,31 +1,19 @@
 {
 	"compilerOptions": {
-		"alwaysStrict": true,
-		"baseUrl": "./",
-		"declaration": true,
-		"forceConsistentCasingInFileNames": true,
-		"lib": [
-			"ES2021"
-		],
+		"target": "ES2021",
 		"module": "Node16",
+		"lib": ["ES2021"],
+		"outDir": "out",
 		"moduleResolution": "Node16",
+		"declaration": true,
+		"strict": true,
 		"noImplicitAny": true,
 		"noImplicitThis": true,
 		"noUnusedLocals": true,
-		"outDir": "Target",
-		"rootDir": "src",
+		"alwaysStrict": true,
 		"skipLibCheck": true,
-		"strict": true,
-		"target": "ES2021"
+		"forceConsistentCasingInFileNames": true
 	},
-	"exclude": [
-		"node_modules"
-	],
-	"extends": "@playform/build/tsconfig",
-	"include": [
-		"lib",
-		"src",
-		"src",
-		"src"
-	]
+	"include": ["lib"],
+	"exclude": ["node_modules"]
 }
