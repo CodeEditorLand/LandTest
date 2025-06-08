@@ -28,12 +28,12 @@
     "test": "cd .. && tsc && cd sample && tsc && node ./out/test/runTest.js"
   },
   "devDependencies": {
-    "@types/mocha": "^10.0.0",
-    "@types/node": "^20",
-    "@types/vscode": "^1.52.0",
-    "glob": "^10.3.10",
-    "mocha": "^10.0.0",
-    "typescript": "^5.4.5"
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^22",
+    "@types/vscode": "^1.100.0",
+    "glob": "^11.0.2",
+    "mocha": "^11.5.0",
+    "typescript": "^5.8.3"
   },
   "dependencies": {}
 }
